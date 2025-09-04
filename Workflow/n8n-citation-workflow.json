@@ -1,0 +1,1026 @@
+{
+  "name": "Citation workflow (book + image)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1120,
+        1424
+      ],
+      "id": "66a51701-71c9-4909-af9b-5034d80e2115",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o",
+          "mode": "list",
+          "cachedResultName": "Citation Generating form (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1954370142,
+          "mode": "list",
+          "cachedResultName": "n8n_state",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o/edit#gid=1954370142"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Key",
+              "lookupValue": "last_processed"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -880,
+        1424
+      ],
+      "id": "e6217ecf-985c-45dc-89b8-69ade9bf3a79",
+      "name": "Get last processed row",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7YjkCn7kbMCm5Etp",
+          "name": "Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o",
+          "mode": "list",
+          "cachedResultName": "Citation Generating form (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Form Responses 1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        -624,
+        1280
+      ],
+      "id": "e4435bc1-1e4b-46e5-bcc7-40012408c1db",
+      "name": "Fetching new form input",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7YjkCn7kbMCm5Etp",
+          "name": "Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -400,
+        1408
+      ],
+      "id": "e065860f-754c-4f17-abd9-37b298e93fd4",
+      "name": "Merging info in a single object"
+    },
+    {
+      "parameters": {
+        "jsCode": "let lastProcessed = 0;\nconst dataRows = [];\n\nfor (const item of items) {\n  if (item.json.Key === 'last_processed') {\n    lastProcessed = parseInt(item.json.Value, 10);\n  } else {\n    dataRows.push(item);\n  }\n}\n\n// Only pass rows after last processed index (assuming 1-based index)\nconst newRows = dataRows.filter(row => row.json.row_number > lastProcessed);\n\n// Output each new row as its own item\nreturn newRows;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -176,
+        1408
+      ],
+      "id": "6c4d34d5-8691-4df0-8565-5b95be0c8832",
+      "name": "Filtering new entries"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json[\"What type of source do you want to cite\"] }}",
+              "value2": "=Book"
+            }
+          ]
+        }
+      },
+      "name": "Source Type",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        16,
+        1408
+      ],
+      "id": "1ab518de-9178-415c-abd9-3c735b322e38"
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search.json",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "amazon"
+            },
+            {
+              "name": "amazon_domain",
+              "value": "amazon.com"
+            },
+            {
+              "name": "k",
+              "value": "={{ $json[\"Book Name \"] }} {{ $json.Author }}"
+            },
+            {
+              "name": "category_id\t",
+              "value": "stripbooks"
+            },
+            {
+              "name": "key"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        368,
+        1392
+      ],
+      "id": "4f53fb3e-6273-47f7-8a0e-fb7111b361db",
+      "name": "SerpAPI request for book details"
+    },
+    {
+      "parameters": {
+        "jsCode": "// const result = $json[\"organic_results\"]?.[0]; // Get the top result\n\n// return [{\n//   json: {\n//     title: result?.title || $json[\"search_parameters\"][\"k\"],\n//     author: $node[\"Extract Title and Author1\"].json[\"author\"], // adjust node name as needed\n//     asin: result?.asin || \"\",\n//     link: result?.link_clean || result?.link || \"\",\n//     price: result?.price || \"\",\n//     thumbnail: result?.thumbnail || \"\"\n//   }\n// }];\n\n// Get the original data from your previous node (replace \"Has Attachment?1\" with your node name)\nconst original = $node[\"Source Type\"].json;\nconst result = $json[\"organic_results\"]?.[0] || {};\n\nreturn [\n  {\n    json: {\n      row_number: original.row_number,\n      Timestamp: original.Timestamp,\n      type: original[\"What type of source do you want to cite\"], // e.g., \"Book\"\n      title: result.title || original[\"Book Name \"] || \"\",\n      author: original[\"Author\"] || \"\",\n      asin: result.asin || \"\",\n      link: result.link_clean || result.link || \"\",\n      price: result.price || \"\",\n      thumbnail: result.thumbnail || \"\"\n      // Do NOT include Source Url or Attachment for Book\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        1392
+      ],
+      "id": "83a2ff7a-b8de-467e-97af-9ea4aee658ab",
+      "name": "Formatting result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get the original data from your previous node (replace \"Has Attachment?1\" with your node name)\nconst original = $node[\"Source Type\"].json;\nconst result = $json[\"organic_results\"]?.[0] || {};\n\nreturn [\n  {\n    json: {\n      row_number: original.row_number,\n      Timestamp: original.Timestamp,\n      type: original[\"What type of source do you want to cite\"], // e.g., \"image\"\n      image_url: original[\"Source Url\"].trim() || \"\",\n      attachment: original[\"Attachment \"] || \"\"\n      // No book fields included here!\n\n  \n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        512,
+        1968
+      ],
+      "id": "af2139fd-eb71-4db8-a901-03649b0f9310",
+      "name": "Formatting result1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1040,
+        1408
+      ],
+      "id": "8cfc671d-97c7-4765-9e0c-9c070a10157a",
+      "name": "Merging all result"
+    },
+    {
+      "parameters": {
+        "operation": "download"
+      },
+      "type": "n8n-nodes-base.box",
+      "typeVersion": 1,
+      "position": [
+        1440,
+        1968
+      ],
+      "id": "5aeff2ea-9fd2-41b9-94ed-eabab3ac5a7d",
+      "name": "Download citation guide",
+      "credentials": {
+        "boxOAuth2Api": {
+          "id": "XPjuZE4LFkBh9xgv",
+          "name": "Box account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1712,
+        1968
+      ],
+      "id": "1d58f399-e177-4bb2-81ee-5c2df765bd4b",
+      "name": "Extract from citation guide"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {
+          "includeUnpaired": true
+        }
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2096,
+        1424
+      ],
+      "id": "b8fb7f30-237f-49dd-8870-63a5c3ba29db",
+      "name": "Merging result + citation guide"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "Qwen/Qwen2.5-VL-72B-Instruct",
+          "mode": "id"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are an academic citation assistant.\n\nBelow is the information provided by the user.\nIt will be for either a book or an image.\n\nBook fields (if present):\n- Title: {{ $json[\"title\"] || \"\" }}\n- Author: {{ $json[\"author\"] || \"\" }}\n- ASIN: {{ $json[\"asin\"] || \"\" }}\n- Amazon Link: {{ $json[\"link\"] || \"\" }}\n\nImage fields (if present):\n- Image URL: {{ $json[\"image_url\"] || \"\" }}\n- Attachment: {{ $json[\"attachment\"] || \"\" }}\n\nOther info:\n- Row number: {{ $json[\"row_number\"] || \"\" }}\n- Timestamp: {{ $json[\"Timestamp\"] || \"\" }}\n- Source Type: {{ $json[\"type\"] || \"\" }}\n\nRefer to the following citation style guide:\n---\n{{ $json.text }}\n---\n\n**Your tasks:**\n1. If a book, check the Amazon link or book metadata and tell the user about the book's licensing status (public domain, copyrighted, or special licensing required).\n2. If an image, visit the image URL and determine its copyright or licensing status (e.g., public domain, Creative Commons, or copyrighted).\n3. Generate a formatted citation for the source (book or image) using the provided citation style rules and the information above.\n\n**Respond strictly as a JSON object with these keys:**\n{\n  \"row_number\": \"{{ $json['row_number'] || '' }}\",\n  \"type\": \"{{ $json['type'] || '' }}\",\n  \"title\": \"{{ $json['title'] || '' }}\",\n  \"author\": \"{{ $json['author'] || '' }}\",\n  \"image_url\": \"{{ $json['image_url'] || '' }}\",\n  \"licensing_info\": \"Your summary of licensing status here.\",\n  \"citation\": \"Your formatted citation here.\",\n  \"Timestamp\": \"{{ $json['Timestamp'] || '' }}\"\n}\n\n\nIf a key is not applicable, return it as an empty string (\"\").\nIf any information is missing or unclear, make reasonable assumptions and note them in the JSON fields.\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        2464,
+        1424
+      ],
+      "id": "bcd6af89-3b8a-4b1d-a8f3-fa5c61102e8f",
+      "name": "Citation Assistant",
+      "credentials": {
+        "openAiApi": {
+          "id": "dSCtAwovqsSnJWBX",
+          "name": "NCSA API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step 1: Get the content string from LLM output\nlet content = $json.message.content;\n\n// Step 2: Remove the markdown code block markers if present\ncontent = content.replace(/^```json/, '').replace(/^```/, '').replace(/```$/, '').trim();\n\n// Step 3: Extract the JSON object string using regex\nconst jsonMatch = content.match(/\\{[\\s\\S]*\\}/);\nif (!jsonMatch) throw new Error(\"No JSON object found in LLM output!\");\n\n// Step 4: Parse the JSON object\nconst parsed = JSON.parse(jsonMatch[0]);\n\n// Step 5: Output as a new item for n8n mapping\nreturn [\n  {\n    json: parsed\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2912,
+        1424
+      ],
+      "id": "c0e6e3f7-f020-4e75-ae3a-51a8a1528142",
+      "name": "Formatting citation result"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "134X7NZ2Dd107zU2eMeAnR4zCTFak69SsyOOgvonfeYE",
+          "mode": "list",
+          "cachedResultName": "Citation Result ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/134X7NZ2Dd107zU2eMeAnR4zCTFak69SsyOOgvonfeYE/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Results",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/134X7NZ2Dd107zU2eMeAnR4zCTFak69SsyOOgvonfeYE/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "Source Type": "={{ $json.type }}",
+            "Title": "={{ $json.title }}",
+            "Author": "={{ $json.author }}",
+            "Image URL": "={{ $json.image_url }}",
+            "Licensing Info": "={{ $json.licensing_info }}",
+            "Citation": "={{ $json.citation }}",
+            "Timestamp": "={{ $json.Timestamp }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source Type",
+              "displayName": "Source Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Title",
+              "displayName": "Title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Author",
+              "displayName": "Author",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Image URL",
+              "displayName": "Image URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Licensing Info",
+              "displayName": "Licensing Info",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Citation",
+              "displayName": "Citation",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3184,
+        1424
+      ],
+      "id": "68978137-b2a1-41eb-be97-ce5bed2b2b8c",
+      "name": "Append row in result sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7YjkCn7kbMCm5Etp",
+          "name": "Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect all row_numbers and find the maximum (highest/newest)\nconst maxRow = Math.max(...items.map(item => parseInt(item.json.row_number, 10)));\n\n// Output this as the new value for n8n_state\nreturn [{ json: { last_processed: maxRow } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3440,
+        1424
+      ],
+      "id": "7326179c-7a37-455e-8c06-493ebc3749a2",
+      "name": "updating last processed index"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o",
+          "mode": "list",
+          "cachedResultName": "Citation Generating form (Responses)",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1954370142,
+          "mode": "list",
+          "cachedResultName": "n8n_state",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1QD8w4p10odeizfkKf--9UFFtedcfjXE1w36jTnkq91o/edit#gid=1954370142"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Key": "last_processed",
+            "Value": "={{ $json.last_processed }}"
+          },
+          "matchingColumns": [
+            "Key"
+          ],
+          "schema": [
+            {
+              "id": "Key",
+              "displayName": "Key",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Value",
+              "displayName": "Value",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3712,
+        1424
+      ],
+      "id": "4edea387-5dc4-4bcb-96e2-1d2c39bae176",
+      "name": "Update latest index in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "7YjkCn7kbMCm5Etp",
+          "name": "Google Sheets account "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Schedule Trigger\nRuns the workflow automatically every 1 minute to check for new form submissions."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1424,
+        1392
+      ],
+      "typeVersion": 1,
+      "id": "ac02ea83-60b6-4d41-b94d-afd8586f48c4",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Fetch form data\nReads the form responses from the “Form Responses” Google Sheets (where the Google Form dumps the data)."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -688,
+        1072
+      ],
+      "typeVersion": 1,
+      "id": "d7599ac6-b9ac-4816-b965-d9110132dd4f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Latest submission tracking\nFetches the index tracking sheet (n8n_state), which keeps track of the last processed row—so the workflow doesn’t process the same submission twice.\n\n",
+        "height": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -960,
+        1600
+      ],
+      "typeVersion": 1,
+      "id": "e42e7768-3b56-4853-989d-4f27bcd5c856",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "## Merge node \nCombines the data from the form responses and the index sheet so the workflow knows which rows are new/unprocessed."
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -464,
+        1616
+      ],
+      "typeVersion": 1,
+      "id": "e66e6e7b-8edf-420e-8bd9-4b5e47fcbccf",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "content": "## Filter Node\nFilters out only the new/unprocessed form entries since the last workflow run.",
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        1200
+      ],
+      "typeVersion": 1,
+      "id": "5c5a585b-7af9-49e9-b5c1-a81bce1ea317",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "content": "## Conditional Node \nDecides if the form entry is for a Book or an Image and routes data accordingly.",
+        "height": 144
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -48,
+        1584
+      ],
+      "typeVersion": 1,
+      "id": "c4dd0a14-6511-461c-a130-d03e8de88b6b",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## SerpAPI HTTPS request\nUses the book name and author to search Amazon for book details/metadata ",
+        "width": 224
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        304,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "7ebf191e-d76f-4f27-966b-d6772b8c6ab5",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "content": "## Code\nFormats and prepares the final book info, combining what was found on Amazon and from the form.\n\n",
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        592,
+        1184
+      ],
+      "typeVersion": 1,
+      "id": "5aa1a53a-5dda-4c3b-b209-89e577883b47",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Code\nExtracts the image URL and row number for image citation processing.",
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        464,
+        2160
+      ],
+      "typeVersion": 1,
+      "id": "c9d4102d-86ae-4a40-9454-eb512f6b343a",
+      "name": "Sticky Note8"
+    },
+    {
+      "parameters": {
+        "content": "## Merge node \nBrings the results of the Book and Image branches together—either will be present depending on the user’s form submission.\n\n",
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        976,
+        1600
+      ],
+      "typeVersion": 1,
+      "id": "1b8702a2-e7f1-4644-a83d-4db793ec2fef",
+      "name": "Sticky Note9"
+    },
+    {
+      "parameters": {
+        "content": "## Citation guide\nDownloads the latest version of your citation style guide from Box \n\n",
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1392,
+        2160
+      ],
+      "typeVersion": 1,
+      "id": "9440ba09-7bd4-4421-85aa-a6656733029c",
+      "name": "Sticky Note10"
+    },
+    {
+      "parameters": {
+        "content": "## Data conversion\nReads the contents of the citation style guide so it can be provided to the LLM.",
+        "height": 176,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1648,
+        1744
+      ],
+      "typeVersion": 1,
+      "id": "7dc4e9f5-b2ec-4a03-ac51-80f61b2bfd45",
+      "name": "Sticky Note11"
+    },
+    {
+      "parameters": {
+        "content": "## Merge Node\nCombines the extracted citation guide and the data for the book or image to create a complete package for the LLM agent.\n\n",
+        "height": 176,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2048,
+        1200
+      ],
+      "typeVersion": 1,
+      "id": "bf4dc776-987f-4844-aed7-d0a60046a796",
+      "name": "Sticky Note12"
+    },
+    {
+      "parameters": {
+        "content": "## LLM Agent\nLLM agent that reviews the book/image info and citation guide, determines licensing/copyright status, and generates a formatted citation.\n\n"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2480,
+        1680
+      ],
+      "typeVersion": 1,
+      "id": "7842a11f-0968-433e-b51a-71e2fa54411b",
+      "name": "Sticky Note13"
+    },
+    {
+      "parameters": {
+        "content": "## Code\nParses the LLM response into specific fields (licensing info, citation, etc) for easy mapping to Google Sheets.",
+        "height": 176,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2864,
+        1200
+      ],
+      "typeVersion": 1,
+      "id": "dfeb83bd-59ac-41ad-b8f0-155e64076d18",
+      "name": "Sticky Note14"
+    },
+    {
+      "parameters": {
+        "content": "## Citation output\nAdds the result (row number, type, title, author, image URL, licensing, citation, etc) to your results sheet.",
+        "height": 192,
+        "width": 192
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3136,
+        1648
+      ],
+      "typeVersion": 1,
+      "id": "c1f137c9-89a3-4ae1-b0e4-0ff136a088bd",
+      "name": "Sticky Note15"
+    },
+    {
+      "parameters": {
+        "content": "## Code\nCollects the highest row number just processed to keep state updated.",
+        "width": 176
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3408,
+        1216
+      ],
+      "typeVersion": 1,
+      "id": "c66f8758-d830-49b0-b8c5-9b538f0122f8",
+      "name": "Sticky Note16"
+    },
+    {
+      "parameters": {
+        "content": "## Index sheet \nUpdates the n8n_state sheet with the latest processed row number, so only new form entries are handled in the next run.\n\n",
+        "height": 176,
+        "width": 208
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3664,
+        1648
+      ],
+      "typeVersion": 1,
+      "id": "5b45db4b-d2d9-4eda-b344-805b4543033e",
+      "name": "Sticky Note17"
+    },
+    {
+      "parameters": {
+        "content": "## User Story\n\n**Title**: *Automate book and image citation* \n\n**As a** \n*faculty, staff at UIUC who frequently needs to generate citations for books and images,* \n\n**I want**\n*a system that automatically collects my citation requests, enriches the information where possible, checks for licensing status, and provides me with correctly formatted citations based on UIUC's citation guide,* \n\n**so that** \n*I can save time, reduce manual effort, and ensure my citations are accurate and compliant.* \n\n \n\n**Acceptance Criteria:** \n\n*The user can submit citation requests for both books and images.*\n\n*The system automatically enriches book details (e.g., title, author, link) where possible.*\n\n*The system processes image citations using provided image URLs or attachments.*\n\n*For each request, the system determines and displays the appropriate licensing status.*\n\n*The system generates citations in the required formatting style based on provided guidelines.*\n\n*All citation results are saved in a central location accessible to the user.*\n\n*Duplicate processing is prevented; each request is only handled once.*\n\n*Users receive accurate and clearly formatted citations for all requests.*\n",
+        "height": 688,
+        "width": 704
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2208,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "1a46a985-8eda-496e-a291-6a9fb250dfbe",
+      "name": "Sticky Note18"
+    },
+    {
+      "parameters": {
+        "content": "## Summary of Work\n\nCollects new citation requests (book or image) submitted through a Google Form.\n\nAutomatically enriches book information by searching Amazon for details like title, author, and link.\n\nProcesses image citations using the provided image URL or attachment.\n\nChecks licensing status for each source (e.g., public domain, copyright).\n\nGenerates formatted citations according to your chosen style guide, using AI.\n\nSaves all citation results in a Google Sheet for easy review and future use.\n\nKeeps track of processed submissions to avoid duplicate citations.\n\nRuns on a schedule, fully automated—no manual work required.",
+        "height": 448,
+        "width": 688
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1328,
+        -176
+      ],
+      "typeVersion": 1,
+      "id": "746e4602-e2f9-471f-afc3-2c7d3d79662f",
+      "name": "Sticky Note19"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get last processed row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get last processed row": {
+      "main": [
+        [
+          {
+            "node": "Fetching new form input",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merging info in a single object",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetching new form input": {
+      "main": [
+        [
+          {
+            "node": "Merging info in a single object",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merging info in a single object": {
+      "main": [
+        [
+          {
+            "node": "Filtering new entries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtering new entries": {
+      "main": [
+        [
+          {
+            "node": "Source Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Source Type": {
+      "main": [
+        [
+          {
+            "node": "SerpAPI request for book details",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Formatting result1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SerpAPI request for book details": {
+      "main": [
+        [
+          {
+            "node": "Formatting result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatting result": {
+      "main": [
+        [
+          {
+            "node": "Merging all result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatting result1": {
+      "main": [
+        [
+          {
+            "node": "Merging all result",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merging all result": {
+      "main": [
+        [
+          {
+            "node": "Merging result + citation guide",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Download citation guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download citation guide": {
+      "main": [
+        [
+          {
+            "node": "Extract from citation guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from citation guide": {
+      "main": [
+        [
+          {
+            "node": "Merging result + citation guide",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merging result + citation guide": {
+      "main": [
+        [
+          {
+            "node": "Citation Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Citation Assistant": {
+      "main": [
+        [
+          {
+            "node": "Formatting citation result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatting citation result": {
+      "main": [
+        [
+          {
+            "node": "Append row in result sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in result sheet": {
+      "main": [
+        [
+          {
+            "node": "updating last processed index",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "updating last processed index": {
+      "main": [
+        [
+          {
+            "node": "Update latest index in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "166fabb6-8a79-4ddb-a038-7368b475805f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "33431ec0c861bdf28b60be34cfddb80150607ad23a2827032c2b7ed4b1173f8d"
+  },
+  "id": "dXKdmom70CYQOVEn",
+  "tags": []
+}
