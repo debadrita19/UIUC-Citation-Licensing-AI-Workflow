@@ -1,6 +1,3 @@
-# UIUC-Citation-Licensing-AI-Workflow
-AI-assisted workflow for generating University of Illinois guide–compliant citations and licensing info using n8n + Qwen API
-
 # UIUC Citation + Licensing — AI Workflow (Agentic)
 
 An agentic AI workflow that generates **guide-compliant citations** and **licensing details** for the **University of Illinois**. Uses **Google Forms/Sheets as the interface** and the **Qwen API** in n8n to standardize outputs, add confidence, and keep an audit log.
